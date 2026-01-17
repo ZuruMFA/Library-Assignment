@@ -11,6 +11,7 @@
 #include <ctime>
 #include <cstdlib>
 #include <cstring>
+#include <optional>
 using namespace std;
 
 #ifdef _WIN32
