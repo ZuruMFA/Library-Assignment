@@ -11,6 +11,7 @@
 #include <ctime>
 #include <cstdlib>
 #include <cstring>
+#include <optional>
 using namespace std;
 
 #ifdef _WIN32
@@ -229,13 +230,25 @@ int getUserActiveLoansCount(const string& username) {
     return cnt;
 }
 
-double calculateOverdueFee(int daysOverdue) {
+double calculateOverdueFee(int daysOverdue) {   
     if (daysOverdue <= 0) return 0.0;
     if (daysOverdue == 1) return 5.00;
     if (daysOverdue == 2) return 6.00;
     if (daysOverdue == 3) return 7.00;
     return 10.00 * daysOverdue;
 }
+
+void syncAllUserActiveLoans() {
+    for (auto& u : users) {
+        u.activeLoans = 0;
+        for (const auto& l : loans) {
+            if (l.username == u.username && !l.isReturned) {
+                u.activeLoans++;
+            }
+        }
+    }
+}
+
 
 // ==================== FILE IO ====================
 
@@ -354,14 +367,23 @@ bool loginUser() {
     string username = inputLine("Username: ");
     string password = inputLine("Password: ");
 
-    for (const auto& u : users) {
+    for (auto& u : users) {
         if (u.username == username && u.password == password) {
+
+            // STEP 3: re-sync active loans for ALL users
+            for (auto& usr : users) {
+                usr.activeLoans = getUserActiveLoansCount(usr.username);
+            }
+            saveUsers();
+
             currentUser = username;
+
             cout << "\nLogin successful! Welcome, " << username << "!\n";
             pressEnterToContinue();
             return true;
         }
     }
+
     cout << "\nInvalid username or password!\n";
     pressEnterToContinue();
     return false;
@@ -495,13 +517,12 @@ void editBook() {
 }
 
 void deleteBook() {
-    clearScreen();
+    clearScreen();  
     cout << "========================================\n";
     cout << "    DELETE BOOK\n";
     cout << "========================================\n";
     cout << "Enter Book ID to delete: ";
-    int id;
-    if (!(cin >> id)) { cin.clear(); cin.ignore(numeric_limits<streamsize>::max(), '\n'); cout << "Invalid\n"; pressEnterToContinue(); return; }
+    int id = inputInt("Enter Book ID to delete: ");
     int idx = -1;
     for (size_t i = 0; i < books.size(); ++i) if (books[i].bookID == id) { idx = (int)i; break; }
     if (idx == -1) { cout << "Book not found!\n"; pressEnterToContinue(); return; }
@@ -566,6 +587,13 @@ void returnBook() {
     int loanId = inputInt("Enter Loan ID: ");
     for (Loan& l : loans) {
         if (l.loanID == loanId && l.username == currentUser && !l.isReturned) {
+
+            // Update the user's active loan count in the vector
+            auto it = findUserIndex(currentUser);
+            if (it) {
+                users[*it].activeLoans = getUserActiveLoansCount(currentUser);
+                saveUsers();
+            }
 
             l.isReturned = true;
             l.returnDate = time(nullptr);
@@ -701,9 +729,12 @@ int main() {
     loadLoans();
     loadUsers();
 
+    syncAllUserActiveLoans();
+    saveUsers();
+
     // ensure user activeLoans counters are consistent with loans
     for (auto& u : users) {
-        u.activeLoans = getUserActiveLoansCount(u.username);
+        u.activeLoans = getUserActiveLoansCount(u.  username);
     }
     saveUsers();
 
