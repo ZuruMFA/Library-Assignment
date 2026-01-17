@@ -11,7 +11,6 @@
 #include <ctime>
 #include <cstdlib>
 #include <cstring>
-#include <optional>
 using namespace std;
 
 #ifdef _WIN32
@@ -19,7 +18,9 @@ using namespace std;
 #else
 #define CLEAR_CMD "clear"
 #endif
+
 // ==================== STRUCTS ====================
+
 struct Book {
     int bookID = 0;
     string title;
@@ -148,6 +149,7 @@ struct User {
 };
 
 // ==================== GLOBALS ====================
+
 const int MAX_LOAN_LIMIT = 5;
 const int LOAN_PERIOD_DAYS = 14;
 
@@ -236,6 +238,7 @@ double calculateOverdueFee(int daysOverdue) {
 }
 
 // ==================== FILE IO ====================
+
 void saveMeta() {
     ofstream of(META_FILE);
     if (!of) return;
@@ -265,10 +268,6 @@ void loadBooks() {
         auto ob = Book::deserialize(line);
         if (ob) books.push_back(*ob);
     }
-    // ensure nextBookID > max existing id
-    int maxID = 0;
-    for (auto& b : books) if (b.bookID > maxID) maxID = b.bookID;
-    if (nextBookID <= maxID) nextBookID = maxID + 1;
 }
 
 void saveLoans() {
@@ -335,6 +334,7 @@ void persistAll() {
 }
 
 // ==================== AUTH ====================
+
 optional<int> findUserIndex(const string& username) {
     for (size_t i = 0; i < users.size(); ++i)
         if (users[i].username == username) return (int)i;
@@ -362,12 +362,10 @@ bool loginUser() {
             return true;
         }
     }
-
     cout << "\nInvalid username or password!\n";
     pressEnterToContinue();
     return false;
 }
-
 
 void registerUser() {
     clearScreen();
@@ -382,7 +380,6 @@ void registerUser() {
         pressEnterToContinue();
         return;
     }
-
     string password = inputLine("Enter password: ");
 
     users.push_back({ username, password, 0 });
@@ -392,8 +389,8 @@ void registerUser() {
     pressEnterToContinue();
 }
 
-
 // ==================== BOOK CATALOGUE ====================
+
 void addBook() {
     clearScreen();
     cout << "========================================\n";
@@ -416,7 +413,6 @@ void addBook() {
     cout << "\nBook added successfully!\n";
     pressEnterToContinue();
 }
-
 
 void viewBooks() {
     clearScreen();
@@ -447,65 +443,54 @@ void viewBooks() {
     pressEnterToContinue();
 }
 
-void searchBook() {
+static void searchBook() {
     clearScreen();
-    cout << "========================================\n";
-    cout << "    SEARCH BOOK\n";
-    cout << "========================================\n";
-    cin.ignore(numeric_limits<streamsize>::max(), '\n');
-    cout << "Enter search keyword (title or author): ";
-    string kw;
-    getline(cin, kw);
-    if (kw.empty()) { cout << "No keyword entered.\n"; pressEnterToContinue(); return; }
+    cout << "=================== SEARCH BOOK ====================\n";
+
+    string keyword = inputLine("Enter title or author: ");
     bool found = false;
-    cout << "\nSearch Results:\n";
-    cout << left << setw(5) << "ID" << setw(30) << "Title"
-        << setw(20) << "Author" << setw(15) << "ISBN"
-        << setw(10) << "Status" << "\n";
-    cout << string(80, '-') << "\n";
-    for (const auto& b : books) {
-        if (b.title.find(kw) != string::npos || b.author.find(kw) != string::npos) {
-            string t = b.title;
-            if ((int)t.size() > 28) t = t.substr(0, 28);
-            string a = b.author;
-            if ((int)a.size() > 18) a = a.substr(0, 18);
-            cout << left << setw(5) << b.bookID
-                << setw(30) << t
-                << setw(20) << a
-                << setw(15) << b.isbn
-                << setw(10) << (b.isAvailable ? "Available" : "Loaned")
-                << "\n";
+
+    for (const Book& b : books) {
+        if (b.title.find(keyword) != string::npos ||
+            b.author.find(keyword) != string::npos) {
+
+            cout << "\nID: " << b.bookID;
+            cout << "\nTitle: " << b.title;
+            cout << "\nAuthor: " << b.author;
+            cout << "\nStatus: " << (b.isAvailable ? "Available" : "Loaned") << "\n";
             found = true;
         }
     }
-    if (!found) cout << "No books found matching the keyword.\n";
+    if (!found) cout << "\nNo book found.\n";
     pressEnterToContinue();
 }
 
 void editBook() {
     clearScreen();
-    cout << "========================================\n";
-    cout << "    EDIT BOOK INFORMATION\n";
-    cout << "========================================\n";
-    cout << "Enter Book ID to edit: ";
-    int id;
-    if (!(cin >> id)) { cin.clear(); cin.ignore(numeric_limits<streamsize>::max(), '\n'); cout << "Invalid input\n"; pressEnterToContinue(); return; }
-    cin.ignore(numeric_limits<streamsize>::max(), '\n');
-    int idx = -1;
-    for (size_t i = 0; i < books.size(); ++i) if (books[i].bookID == id) { idx = (int)i; break; }
-    if (idx == -1) { cout << "Book not found!\n"; pressEnterToContinue(); return; }
-    cout << "\nCurrent Title: " << books[idx].title << "\nNew Title (or press Enter to keep): ";
-    string s;
-    getline(cin, s);
-    if (!s.empty()) books[idx].title = s;
-    cout << "Current Author: " << books[idx].author << "\nNew Author (or press Enter to keep): ";
-    getline(cin, s);
-    if (!s.empty()) books[idx].author = s;
-    cout << "Current ISBN: " << books[idx].isbn << "\nNew ISBN (or press Enter to keep): ";
-    getline(cin, s);
-    if (!s.empty()) books[idx].isbn = s;
-    saveBooks();
-    cout << "\nBook information updated successfully!\n";
+    cout << "=================== EDIT BOOK ===================\n";
+    int id = inputInt("Enter Book ID: ");
+    for (Book& b : books) {
+        if (b.bookID == id) {
+            string s;
+            cout << "New title (Enter to skip): ";
+            getline(cin, s);
+            if (!s.empty()) b.title = s;
+
+            cout << "New author (Enter to skip): ";
+            getline(cin, s);
+            if (!s.empty()) b.author = s;
+
+            cout << "New ISBN (Enter to skip): ";
+            getline(cin, s);
+            if (!s.empty()) b.isbn = s;
+
+            saveBooks();
+            cout << "Book updated.\n";
+            pressEnterToContinue();
+            return;
+        }
+    }
+    cout << "Book not found.\n";
     pressEnterToContinue();
 }
 
@@ -530,196 +515,121 @@ void deleteBook() {
     pressEnterToContinue();
 }
 
-// ==================== LOANS ====================
-void loanBook() {
-    if (currentUser.empty()) { cout << "No user logged in\n"; pressEnterToContinue(); return; }
-    clearScreen();
-    cout << "========================================\n";
-    cout << "    LOAN BOOK\n";
-    cout << "========================================\n";
-    int active = getUserActiveLoansCount(currentUser);
-    cout << "Your active loans: " << active << "/" << MAX_LOAN_LIMIT << "\n";
-    if (active >= MAX_LOAN_LIMIT) { cout << "You have reached the maximum loan limit!\n"; pressEnterToContinue(); return; }
+// ==================== BOOK LOAN ====================
 
-    // check outstanding overdue amounts for this user
-    for (const auto& l : loans) {
-        if (l.username == currentUser && l.overdueAmount > 0.0) {
-            cout << "You have outstanding overdue payments. Clear them before borrowing more.\n";
+void loanBook() {
+    clearScreen();
+    cout << "-------------------- LOAN BOOK --------------------\n";
+    if (getUserActiveLoansCount(currentUser) >= MAX_LOAN_LIMIT) {
+        cout << "Loan limit reached.\n";
+        pressEnterToContinue();
+        return;
+    }
+    int id = inputInt("Enter Book ID: ");
+    for (Book& b : books) {
+        if (b.bookID == id) {
+            if (!b.isAvailable) {
+                cout << "Book already loaned.\n";
+                pressEnterToContinue();
+                return;
+            }
+            Loan l;
+            l.loanID = nextLoanID++;
+            l.bookID = id;
+            l.username = currentUser;
+            l.loanDate = time(nullptr);
+            l.dueDate = l.loanDate + LOAN_PERIOD_DAYS * 24 * 60 * 60;
+            l.isReturned = false;
+
+            loans.push_back(l);
+            b.isAvailable = false;
+
+            saveLoans();
+            saveBooks();
+            saveMeta();
+
+            cout << "Book loaned successfully.\n";
             pressEnterToContinue();
             return;
         }
     }
-
-    cout << "Enter Book ID to loan: ";
-    int id;
-    if (!(cin >> id)) { cin.clear(); cin.ignore(numeric_limits<streamsize>::max(), '\n'); cout << "Invalid\n"; pressEnterToContinue(); return; }
-    int idx = -1;
-    for (size_t i = 0; i < books.size(); ++i) if (books[i].bookID == id) { idx = (int)i; break; }
-    if (idx == -1) { cout << "Book not found!\n"; pressEnterToContinue(); return; }
-    if (!books[idx].isAvailable) { cout << "This book is currently loaned out!\n"; pressEnterToContinue(); return; }
-
-    Loan L;
-    L.loanID = nextLoanID++;
-    L.bookID = id;
-    L.username = currentUser;
-    L.loanDate = time(nullptr);
-    L.dueDate = L.loanDate + (time_t)LOAN_PERIOD_DAYS * 24 * 60 * 60;
-    L.returnDate = 0;
-    L.isReturned = false;
-    L.overdueAmount = 0.0;
-    loans.push_back(L);
-
-    // mark book not available
-    books[idx].isAvailable = false;
-
-    // update user's activeLoans counter (persistent in user record too)
-    auto optidx = findUserIndex(currentUser);
-    if (optidx) { users[*optidx].activeLoans = getUserActiveLoansCount(currentUser); saveUsers(); }
-
-    saveBooks();
-    saveLoans();
-    saveMeta();
-
-    cout << "\nBook loaned successfully!\n";
-    cout << "Due date: " << LOAN_PERIOD_DAYS << " days from now\n";
+    cout << "Book not found.\n";
     pressEnterToContinue();
 }
+
+// ==================== BOOK RETURN ====================
 
 void returnBook() {
-    if (currentUser.empty()) { cout << "No user logged in\n"; pressEnterToContinue(); return; }
     clearScreen();
-    cout << "========================================\n";
-    cout << "    RETURN BOOK\n";
-    cout << "========================================\n";
+    cout << "-------------------- RETURN BOOK --------------------\n";
 
-    cout << "Your active loans:\n";
-    cout << left << setw(8) << "Loan ID" << setw(30) << "Book Title" << setw(15) << "Due Date" << "\n";
-    cout << string(60, '-') << "\n";
+    int loanId = inputInt("Enter Loan ID: ");
+    for (Loan& l : loans) {
+        if (l.loanID == loanId && l.username == currentUser && !l.isReturned) {
 
-    bool hasLoans = false;
-    for (const auto& l : loans) {
-        if (l.username == currentUser && !l.isReturned) {
-            string bookTitle = "Unknown";
-            for (const auto& b : books)
+            l.isReturned = true;
+            l.returnDate = time(nullptr);
+
+            int lateDays = (int)difftime(l.returnDate, l.dueDate) / (60 * 60 * 24);
+            if (lateDays > 0) {
+                l.overdueAmount = calculateOverdueFee(lateDays);
+                cout << "Late return. Fee: RM " << l.overdueAmount << "\n";
+            }
+            for (Book& b : books)
                 if (b.bookID == l.bookID)
-                    bookTitle = b.title;
+                    b.isAvailable = true;
 
-            char duebuff[20];
-            tm dt{};
+            saveLoans();
+            saveBooks();
 
-            // Safe version
-            if (localtime_s(&dt, &l.dueDate) == 0) {
-                strftime(duebuff, sizeof(duebuff), "%Y-%m-%d", &dt);
-            }
-            else {
-                strcpy_s(duebuff, sizeof(duebuff), "N/A");
-            }
-
-            cout << left << setw(8) << l.loanID
-                << setw(30) << bookTitle.substr(0, 28)
-                << setw(15) << duebuff << "\n";
-
-            hasLoans = true;
+            cout << "Book returned.\n";
+            pressEnterToContinue();
+            return;
         }
     }
-
-    if (!hasLoans) { cout << "You have no active loans.\n"; pressEnterToContinue(); return; }
-
-    cout << "\nEnter Loan ID to return: ";
-    int lid;
-    if (!(cin >> lid)) { cin.clear(); cin.ignore(numeric_limits<streamsize>::max(), '\n'); cout << "Invalid\n"; pressEnterToContinue(); return; }
-    int idx = -1;
-    for (size_t i = 0; i < loans.size(); ++i) if (loans[i].loanID == lid && loans[i].username == currentUser && !loans[i].isReturned) { idx = (int)i; break; }
-    if (idx == -1) { cout << "Loan not found or already returned!\n"; pressEnterToContinue(); return; }
-
-    time_t currentTime = time(nullptr);
-    loans[idx].returnDate = currentTime;
-    loans[idx].isReturned = true;
-
-    int daysOverdue = (int)difftime(currentTime, loans[idx].dueDate) / (24 * 60 * 60);
-    if (daysOverdue < 0) daysOverdue = 0;
-    if (daysOverdue > 0) {
-        loans[idx].overdueAmount = calculateOverdueFee(daysOverdue);
-        cout << "\nBook is " << daysOverdue << " day(s) overdue!\n";
-        cout << "Overdue fee: RM " << fixed << setprecision(2) << loans[idx].overdueAmount << "\n";
-    }
-    else {
-        cout << "\nBook returned on time!\n";
-    }
-
-    // mark book available
-    for (auto& b : books) if (b.bookID == loans[idx].bookID) { b.isAvailable = true; break; }
-
-    // update user activeLoans
-    auto optidx = findUserIndex(currentUser);
-    if (optidx) { users[*optidx].activeLoans = getUserActiveLoansCount(currentUser); saveUsers(); }
-
-    saveBooks();
-    saveLoans();
-    cout << "Book returned successfully!\n";
+    cout << "Loan not found.\n";
     pressEnterToContinue();
 }
 
-void viewOverduePayments() {
-    if (currentUser.empty()) { cout << "No user logged in\n"; pressEnterToContinue(); return; }
-    clearScreen();
-    cout << "========================================\n";
-    cout << "    OVERDUE PAYMENTS\n";
-    cout << "========================================\n";
+// ==================== OVERDUE PAYMENT ====================
 
-    cout << left << setw(8) << "Loan ID" << setw(30) << "Book Title" << setw(15) << "Amount (RM)" << "\n";
-    cout << string(60, '-') << "\n";
-    bool hasOverdues = false;
-    double total = 0.0;
-    for (const auto& l : loans) {
-        if (l.username == currentUser && l.overdueAmount > 0.0) {
-            string title = "Unknown";
-            for (const auto& b : books) if (b.bookID == l.bookID) { title = b.title; break; }
-            string t = title;
-            if ((int)t.size() > 28) t = t.substr(0, 28);
-            cout << left << setw(8) << l.loanID << setw(30) << t << setw(15) << fixed << setprecision(2) << l.overdueAmount << "\n";
-            total += l.overdueAmount;
-            hasOverdues = true;
+void viewOverduePayments() {
+    clearScreen();
+    cout << "~~~~~~~~~~~~~~~~~~~~ OVERDUE FEES ~~~~~~~~~~~~~~~~~~~~\n";
+
+    bool found = false;
+    for (const Loan& l : loans) {
+        if (l.username == currentUser && l.overdueAmount > 0) {
+            cout << "Loan ID: " << l.loanID
+                << " | Amount: RM " << l.overdueAmount << "\n";
+            found = true;
         }
     }
-    if (!hasOverdues) cout << "You have no overdue payments.\n";
-    else {
-        cout << string(60, '-') << "\n";
-        cout << "Total Overdue: RM " << fixed << setprecision(2) << total << "\n";
-    }
+    if (!found) cout << "No overdue fees.\n";
     pressEnterToContinue();
 }
 
 void payOverdue() {
-    if (currentUser.empty()) { cout << "No user logged in\n"; pressEnterToContinue(); return; }
     clearScreen();
-    cout << "========================================\n";
-    cout << "    PAY OVERDUE FEES\n";
-    cout << "========================================\n";
+    cout << "~~~~~~~~~~~~~~~~~~~~ PAY OVERDUE ~~~~~~~~~~~~~~~~~~~~\n";
 
-    bool has = false;
-    for (const auto& l : loans) if (l.username == currentUser && l.overdueAmount > 0) { has = true; break; }
-    if (!has) { cout << "You have no overdue payments.\n"; pressEnterToContinue(); return; }
+    int id = inputInt("Enter Loan ID: ");
 
-    cout << "Enter Loan ID to pay: ";
-    int lid;
-    if (!(cin >> lid)) { cin.clear(); cin.ignore(numeric_limits<streamsize>::max(), '\n'); cout << "Invalid\n"; pressEnterToContinue(); return; }
-    int idx = -1;
-    for (size_t i = 0; i < loans.size(); ++i) if (loans[i].loanID == lid && loans[i].username == currentUser && loans[i].overdueAmount > 0.0) { idx = (int)i; break; }
-    if (idx == -1) { cout << "Loan not found or no overdue amount!\n"; pressEnterToContinue(); return; }
-    cout << "Amount to pay: RM " << fixed << setprecision(2) << loans[idx].overdueAmount << "\n";
-    cout << "Confirm payment? (1=Yes, 0=No): ";
-    int conf; if (!(cin >> conf)) { cin.clear(); cin.ignore(numeric_limits<streamsize>::max(), '\n'); cout << "Invalid\n"; pressEnterToContinue(); return; }
-    if (conf == 1) {
-        loans[idx].overdueAmount = 0.0;
-        saveLoans();
-        cout << "Payment successful!\n";
+    for (Loan& l : loans) {
+        if (l.loanID == id && l.username == currentUser && l.overdueAmount > 0) {
+            cout << "Paid RM " << l.overdueAmount << "\n";
+            l.overdueAmount = 0;
+            saveLoans();
+            pressEnterToContinue();
+            return;
+        }
     }
-    else cout << "Payment cancelled.\n";
+    cout << "No overdue found.\n";
     pressEnterToContinue();
 }
 
 // ==================== MENUS ====================
+
 void bookCatalogueMenu() {
     int choice;
     do {
@@ -746,7 +656,6 @@ void bookCatalogueMenu() {
         }
     } while (choice != 0);
 }
-
 
 void mainMenu() {
     int choice;
@@ -783,8 +692,8 @@ void mainMenu() {
     } while (!currentUser.empty());
 }
 
-
 // ==================== MAIN ====================
+
 int main() {
     // Load everything
     loadMeta();
@@ -823,8 +732,6 @@ int main() {
             pressEnterToContinue();
         }
     } while (choice != 0);
-
     persistAll();
     return 0;
 }
-
