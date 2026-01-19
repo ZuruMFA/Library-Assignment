@@ -589,13 +589,13 @@ void returnBook() {
         if (l.loanID == loanId && l.username == currentUser && !l.isReturned) {
 
             // Update the user's active loan count in the vector
+
+            l.isReturned = true;
             auto it = findUserIndex(currentUser);
             if (it) {
                 users[*it].activeLoans = getUserActiveLoansCount(currentUser);
                 saveUsers();
             }
-
-            l.isReturned = true;
             l.returnDate = time(nullptr);
 
             int lateDays = (int)difftime(l.returnDate, l.dueDate) / (60 * 60 * 24);
