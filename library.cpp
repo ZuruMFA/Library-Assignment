@@ -521,12 +521,10 @@ void deleteBook() {
     cout << "========================================\n";
     cout << "    DELETE BOOK\n";
     cout << "========================================\n";
-    cout << "Enter Book ID to delete: ";
     int id = inputInt("Enter Book ID to delete: ");
     int idx = -1;
     for (size_t i = 0; i < books.size(); ++i) if (books[i].bookID == id) { idx = (int)i; break; }
-    if (idx == -1) { cout << "Book not found!\n"; pressEnterToContinue(); return; }
-    if (!books[idx].isAvailable) {
+    if (idx == -1) { cout << "Book not found!\n"; pressEnterToContinue(); return;
         cout << "Cannot delete book that is currently loaned!\n";
         pressEnterToContinue(); return;
     }
